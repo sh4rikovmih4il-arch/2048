@@ -11,8 +11,6 @@ coords = {
     "21": (-150,  50), "22": (-50,  50), "23": (50,  50), "24": (150,  50),
     "31": (-150, -50), "32": (-50, -50), "33": (50, -50), "34": (150, -50),
     "41": (-150,-150), "42": (-50,-150), "43": (50,-150), "44": (150,-150)
-
-
 }
 
 TILE_COLORS = {
@@ -31,6 +29,7 @@ t.speed(0)
 turtle.tracer(0)
 
 score = 0
+board = []
 
 def draw_grid():
     t.color("#6B635A")
@@ -93,10 +92,10 @@ def draw_board(board):
     turtle.update()
 
 def init_game():
+    global board
     board = [[0] * SIZE for _ in range(SIZE)]
     add_tile(board)
     add_tile(board)
-    return board
 
 def add_tile(board):
     empty_cells = [(i, j) for i in range(SIZE) for j in range(SIZE) if board[i][j] == 0]
@@ -158,64 +157,68 @@ def has_won(board):
 def save_game():
     with open('save_2048.txt', 'w', encoding='utf-8') as f:
         f.write(f"{score}\n")
-        f.write(str(board))
-def save_stats():
-    """Сохраняет статистику игр в файл (сохраняет только последние 3 игры)."""
-    with open('game_stats_2048.txt', 'w', encoding='utf-8') as f:
-        f.write(f"Счет: {score}\n")
-        f.write(f"Максимальное число: {max([max(row) for row in board])}\n")
-        f.write(f"Время: {datetime.now()}\n")
-        f.write(f"Поле: {board}")
+        for row in board:
+            f.write(" ".join(str(x) for x in row) + "\n")
 
 def load_game():
+    global board, score
     with open('save_2048.txt', 'r', encoding='utf-8') as f:
-        pass
+        lines = f.read().splitlines()
+    score = int(lines[0])
+    board = [[int(x) for x in lines[i].split()] for i in range(1, SIZE + 1)]
+    draw_board(board)
+
 def handle_move(direction):
     global score
     moved, points = move(board, direction)
-    
     if moved:
         score += points
         add_tile(board)
         process_game_state()
-    save_game()
-
 
 def process_game_state():
     draw_board(board)
-    
     if has_won(board):
         show_win_screen()
     elif is_game_over(board):
         show_game_over_screen()
 
-
 def show_win_screen():
-    t.penup()
     screen.clearscreen()
     t.goto(-270, 0)
     t.color("#00FF00")
     t.write(f"Счёт: {score}. ПОБЕДА!", align="left", font=("Arial", 50, "bold"))
+    turtle.update()
     save_stats()
-
+    register_keys()
 
 def show_game_over_screen():
-    t.penup()
     screen.clearscreen()
     t.goto(-250, 0)
     t.color("#776E65")
     t.write("Игра окончена!", align="left", font=("Arial", 50, "bold"))
+    turtle.update()
     save_stats()
+    register_keys()
 
+def save_stats():
+    max_val = max([max(row) for row in board])
+    with open('game_stats_2048.txt', 'a', encoding='utf-8') as f:
+        f.write(f"Счет: {score}\n")
+        f.write(f"Максимальное число: {max_val}\n")
+        f.write(f"Время: {datetime.now()}\n")
+        f.write(f"Поле: {board}\n\n")
 
-screen.onkey(lambda: handle_move('s'), "w")
-screen.onkey(lambda: handle_move('w'), "s")
-screen.onkey(lambda: handle_move('a'), "a")
-screen.onkey(lambda: handle_move('d'), "d")
+def register_keys():
+    screen.onkey(lambda: handle_move('w'), "w")
+    screen.onkey(lambda: handle_move('s'), "s")
+    screen.onkey(lambda: handle_move('a'), "a")
+    screen.onkey(lambda: handle_move('d'), "d")
+    screen.onkey(save_game, "k")
+    screen.onkey(load_game, "l")
 
-screen.listen()
-
-board = init_game()
+init_game()
 draw_board(board)
-
+register_keys()
+screen.listen()
 turtle.done()
